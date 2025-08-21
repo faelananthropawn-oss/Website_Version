@@ -28,7 +28,11 @@ const javaToBedrockMap = JSON.parse(
   await fs.promises.readFile(new URL("./java-to-bedrock.json", import.meta.url), "utf8")
 );
 
-const INVALID_BLOCKS = new Set(["minecraft:piston_head"]);
+const INVALID_BLOCKS = new Set([
+  "minecraft:piston_head",
+  "minecraft:moving_block",
+  "minecraft:moving_piston",
+]);
 
 // ---------- tiny utils ----------
 const isAir = (n) => n === "minecraft:air" || n === "minecraft:cave_air" || n === "minecraft:void_air";
@@ -405,6 +409,7 @@ function translateBlock(javaBlock) {
 
   let [namePart, stateStr] = javaBlock.split("[");
   let blockName = normalizeNamespace(namePart);
+
   if (isAir(blockName) || INVALID_BLOCKS.has(blockName)) return null;
 
   const mapEntry =
@@ -429,29 +434,33 @@ function translateBlock(javaBlock) {
     }
   }
   if (mapEntry?.removals) for (const key of mapEntry.removals) delete javaStates[key];
+  if (mapEntry?.tile_extra) for (const javaKey of Object.values(mapEntry.tile_extra)) delete javaStates[javaKey];
 
+  // identifier + nested mapping
   let bedrockName = null;
   if (mapEntry?.mapping && mapEntry.identifier) {
     const idKeys = Array.isArray(mapEntry.identifier) ? mapEntry.identifier : [mapEntry.identifier];
-    let chosenName = null;
+    let node = mapEntry.mapping;
     for (const key of idKeys) {
       const val = javaStates[key];
-      if (val !== undefined && mapEntry.mapping[val]) {
-        const mapped = mapEntry.mapping[val];
-        chosenName = typeof mapped === "object" ? (mapped.name || buildStateName(mapped)) : mapped;
-        break;
+      if (val !== undefined && node[val] !== undefined) node = node[val];
+      else if (node.def !== undefined) node = node.def;
+      else { node = null; break; }
+    }
+    if (node) {
+      if (typeof node === "string") {
+        bedrockName = normalizeNamespace(node);
+      } else if (isObj(node)) {
+        bedrockName = normalizeNamespace(node.name || buildStateName(node));
+        if (node.additions) mapEntry.additions = { ...(mapEntry.additions ?? {}), ...node.additions };
+        if (node.removals)  mapEntry.removals  = [ ...(mapEntry.removals  ?? []), ...node.removals ];
+        if (node.renames)   mapEntry.renames   = { ...(mapEntry.renames   ?? {}), ...node.renames };
+        if (node.remaps)    mapEntry.remaps    = { ...(mapEntry.remaps    ?? {}), ...node.remaps  };
       }
     }
-    if (!chosenName) {
-      if (mapEntry.mapping["false"]) {
-        const mapped = mapEntry.mapping["false"]; chosenName = typeof mapped === "object" ? (mapped.name || buildStateName(mapped)) : mapped;
-      } else if (mapEntry.mapping["0"]) {
-        const mapped = mapEntry.mapping["0"]; chosenName = typeof mapped === "object" ? (mapped.name || buildStateName(mapped)) : mapped;
-      }
-    }
-    if (chosenName) bedrockName = normalizeNamespace(chosenName);
     for (const key of idKeys) delete javaStates[key];
   }
+
   if (!bedrockName && mapEntry?.name) bedrockName = normalizeNamespace(mapEntry.name);
   if (!bedrockName) bedrockName = blockName;
 
@@ -459,7 +468,6 @@ function translateBlock(javaBlock) {
   for (const [jKey, jValRaw] of Object.entries(javaStates)) {
     const renamedKey = (mapEntry?.renames && mapEntry.renames[jKey]) || jKey;
     let value = jValRaw;
-
     const remapSpec = mapEntry?.remaps?.[renamedKey] ?? mapEntry?.remaps?.[jKey];
     if (remapSpec !== undefined) {
       if (Array.isArray(remapSpec)) {
@@ -469,7 +477,6 @@ function translateBlock(javaBlock) {
         value = remapSpec[value];
       }
     }
-
     const valStr = isNumericOrBoolean(value) ? String(value) : `"${value}"`;
     bedrockStates.push(`"${renamedKey}"=${valStr}`);
   }
@@ -479,11 +486,15 @@ function translateBlock(javaBlock) {
       bedrockStates.push(`"${k}"=${valStr}`);
     }
   }
-
   if (bedrockStates.length) bedrockName += `[${bedrockStates.join(",")}]`;
 
   if (typeof bedrockName === "object") bedrockName = buildStateName(bedrockName);
   if (typeof bedrockName !== "string") bedrockName = String(bedrockName);
+
+  // Post-translation filter (handles anything mapped to an invalid target)
+  const outNameOnly = normalizeNamespace(bedrockName.split("[")[0]);
+  if (isAir(outNameOnly) || INVALID_BLOCKS.has(outNameOnly)) return null;
+
   return bedrockName;
 }
 
