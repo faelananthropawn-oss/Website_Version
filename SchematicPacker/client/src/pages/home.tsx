@@ -513,33 +513,25 @@ export default function Home() {
             </CardContent>
           </Card>
 
-         export default function Home() {
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-900 text-slate-50">
-      {/* Main content */}
-      <main className="flex-grow max-w-4xl mx-auto px-6 py-8">
-        <div className="space-y-8">
-          {/* Your converter UI (upload, progress, etc.) goes here */}
-        </div>
-      </main>
-
-      {/* Disclaimer Box */}
-      <footer className="mt-4 px-6 max-w-4xl mx-auto w-full">
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-3">
-              <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium text-slate-200">Disclaimer</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  This is only a website version of the repository and is on a free server. 
-                  If you want to process larger files you will need to download the project to your own device.
-                </p>
+          {/* Disclaimer Box */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium text-slate-200">Disclaimer</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    This is only a website version of the repository and is hosted on a free server. 
+                    If you want to process extra large files you will need to download the project to your own device.
+                  </p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </footer>
+            </CardContent>
+          </Card>
+
+        </div>
+
+      </div>
     </div>
   );
 }
