@@ -111,16 +111,16 @@ export default function Home() {
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/progress/${uploadedFile?.conversionId}`);
       const data = await response.json();
-      
+
       if (data.error) {
         setState("error");
         return data;
       }
-      
+
       if (data.progress >= 100) {
         setState("complete");
       }
-      
+
       return data;
     },
   });
@@ -128,7 +128,7 @@ export default function Home() {
   const handleFileSelect = (file: File) => {
     const validExtensions = ['.schem', '.schematic'];
     const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-    
+
     if (!validExtensions.includes(fileExtension)) {
       toast({
         title: "Invalid file type",
@@ -154,7 +154,7 @@ export default function Home() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       handleFileSelect(files[0]);
@@ -180,7 +180,7 @@ export default function Home() {
 
   const handleConvert = () => {
     if (!uploadedFile || !packName.trim()) return;
-    
+
     convertMutation.mutate({
       conversionId: uploadedFile.conversionId,
       filePath: uploadedFile.path,
@@ -253,7 +253,7 @@ export default function Home() {
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="p-8">
               <div className="text-center space-y-6">
-                
+
                 {/* Upload State */}
                 {state === "upload" && (
                   <div className="space-y-6" data-testid="upload-state">
@@ -283,12 +283,12 @@ export default function Home() {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           data-testid="file-input"
                         />
-                        
+
                         <div className="text-center space-y-4">
                           <div className="mx-auto w-16 h-16 bg-slate-700 group-hover:bg-blue-500/20 rounded-full flex items-center justify-center transition-colors duration-200">
                             <Upload className="text-2xl text-slate-400 group-hover:text-blue-400" />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <p className="text-lg font-medium text-slate-300">Drop your schematic file here</p>
                             <p className="text-sm text-slate-500">or click to browse</p>
@@ -296,7 +296,7 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Selected File Display */}
                       {selectedFile && uploadedFile && (
                         <div className="mt-4 p-4 bg-slate-700/50 border border-slate-600 rounded-lg" data-testid="selected-file-display">
@@ -513,8 +513,24 @@ export default function Home() {
             </CardContent>
           </Card>
 
+          {/* Disclaimer Box */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <Info className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium text-slate-200">Disclaimer</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">
+                    This is only a website version of the repository and a free server. 
+                    If you want to process larger files you will need to download the project to your own device.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         </div>
-        
+
       </div>
     </div>
   );
