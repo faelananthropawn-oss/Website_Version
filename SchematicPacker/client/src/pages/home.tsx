@@ -241,7 +241,7 @@ export default function Home() {
             <Box className="text-blue-500 text-xl" />
             <h1 className="text-xl font-semibold text-slate-50">Originals Schematic → Mcpack</h1>
             <div className="hidden sm:flex items-center space-x-2 ml-auto">
-              <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">v1.0.0</span>
+              <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded">v1.0.1</span>
             </div>
           </div>
         </div>
