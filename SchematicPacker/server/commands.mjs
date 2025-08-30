@@ -417,6 +417,7 @@ function translateBlock(javaBlock) {
     javaToBedrockMap[blockName.replace(/^minecraft:/, "")] ??
     null;
 
+  // --- Parse incoming Java states ---
   const javaStates = {};
   if (stateStr) {
     stateStr = stateStr.replace(/\]$/, "");
@@ -428,29 +429,31 @@ function translateBlock(javaBlock) {
     }
   }
 
+  // Apply defaults BEFORE mapping (so identifier lookups can see them)
   if (mapEntry?.defaults) {
     for (const [k, v] of Object.entries(mapEntry.defaults)) {
       if (javaStates[k] === undefined) javaStates[k] = String(v);
     }
   }
-  if (mapEntry?.removals) for (const key of mapEntry.removals) delete javaStates[key];
-  if (mapEntry?.tile_extra) for (const javaKey of Object.values(mapEntry.tile_extra)) delete javaStates[javaKey];
 
-  // identifier + nested mapping
+  // --- IDENTIFIER-DRIVEN MAPPING (happens BEFORE removals) ---
   let bedrockName = null;
   if (mapEntry?.mapping && mapEntry.identifier) {
     const idKeys = Array.isArray(mapEntry.identifier) ? mapEntry.identifier : [mapEntry.identifier];
     let node = mapEntry.mapping;
+
     for (const key of idKeys) {
       const val = javaStates[key];
       if (val !== undefined && node[val] !== undefined) node = node[val];
       else if (node.def !== undefined) node = node.def;
       else { node = null; break; }
     }
+
     if (node) {
       if (typeof node === "string") {
         bedrockName = normalizeNamespace(node);
       } else if (isObj(node)) {
+        // Merge node-specific directives into the current rule
         bedrockName = normalizeNamespace(node.name || buildStateName(node));
         if (node.additions) mapEntry.additions = { ...(mapEntry.additions ?? {}), ...node.additions };
         if (node.removals)  mapEntry.removals  = [ ...(mapEntry.removals  ?? []), ...node.removals ];
@@ -458,16 +461,25 @@ function translateBlock(javaBlock) {
         if (node.remaps)    mapEntry.remaps    = { ...(mapEntry.remaps    ?? {}), ...node.remaps  };
       }
     }
+
+    // Remove identifier keys from the outgoing state AFTER we used them
     for (const key of idKeys) delete javaStates[key];
   }
 
+  // If mapping didn’t pick a name, fall back
   if (!bedrockName && mapEntry?.name) bedrockName = normalizeNamespace(mapEntry.name);
   if (!bedrockName) bedrockName = blockName;
 
+  // --- NOW do removals (AFTER mapping so we don’t lose identifier data early) ---
+  if (mapEntry?.removals) for (const key of mapEntry.removals) delete javaStates[key];
+  if (mapEntry?.tile_extra) for (const javaKey of Object.values(mapEntry.tile_extra)) delete javaStates[javaKey];
+
+  // --- Build Bedrock state string ---
   const bedrockStates = [];
   for (const [jKey, jValRaw] of Object.entries(javaStates)) {
     const renamedKey = (mapEntry?.renames && mapEntry.renames[jKey]) || jKey;
     let value = jValRaw;
+
     const remapSpec = mapEntry?.remaps?.[renamedKey] ?? mapEntry?.remaps?.[jKey];
     if (remapSpec !== undefined) {
       if (Array.isArray(remapSpec)) {
@@ -477,15 +489,18 @@ function translateBlock(javaBlock) {
         value = remapSpec[value];
       }
     }
+
     const valStr = isNumericOrBoolean(value) ? String(value) : `"${value}"`;
     bedrockStates.push(`"${renamedKey}"=${valStr}`);
   }
+
   if (mapEntry?.additions) {
     for (const [k, v] of Object.entries(mapEntry.additions)) {
       const valStr = isNumericOrBoolean(v) ? String(v) : `"${v}"`;
       bedrockStates.push(`"${k}"=${valStr}`);
     }
   }
+
   if (bedrockStates.length) bedrockName += `[${bedrockStates.join(",")}]`;
 
   if (typeof bedrockName === "object") bedrockName = buildStateName(bedrockName);
